@@ -1,114 +1,112 @@
-# Atlas — Discovery Questions (before we build)
+# Atlas — Discovery Questions
 
-**The constraint that shapes everything:** Atlas's engineering team is fully booked.
-We get **exactly one 30-minute meeting** to request app-side changes (set a base
-URL, send headers, add metadata). Everything else must be solved through
-**TrueFoundry Gateway configuration** — no new services, no SDKs, no app refactors.
+A prioritised set of questions to resolve with Atlas before implementation. The
+goal is to lock down the few decisions that determine the architecture, then
+confirm the remaining configuration values.
 
-So the questions are ranked by a simple rule:
+## Guiding constraint
 
-1. **P0 — Foundational / app-side:** answers that decide what we spend the one
-   30-min meeting on. If we get these wrong, nothing else works.
-2. **P1 — Behavior & compliance:** design decisions that change the config and
-   carry renewal/audit risk.
-3. **P2 — Config values:** numbers and toggles we can default sensibly and confirm
-   later.
+Atlas's engineering team is fully booked. We have a single 30-minute window to
+request application-side changes (base URL, request headers, request metadata).
+Everything else is delivered through TrueFoundry Gateway configuration — no new
+services and no application refactors.
 
----
+Because the application-side window is the scarce resource, the questions are
+prioritised accordingly:
 
-## P0 — Foundational (must answer; mostly the one app-side meeting)
-
-These are the asks for the 30-minute meeting. The Gateway **routes, budgets, and
-reports on metadata it receives** — it does not infer tenant, user, or token size
-on its own. So the app must send the right signals.
-
-1. **Per-request identity — will you send `tenant_id` (and `user_id`) as metadata
-   on every API call, or should we issue a separate API key per tenant?**
-   *Why it's #1:* every other feature (per-tenant budgets, per-tenant log routing,
-   per-tenant + per-user cost reports) keys off this. No tenant identity → nothing
-   downstream works.
-
-2. **Token-size flag — can your app count tokens before the call and pass a flag
-   like `x-tfy-metadata: {"size": "large"}` when input exceeds the threshold?**
-   *Why:* the gateway routes on metadata; **it does not count tokens itself.** This
-   is the single app-side change that makes "big → Claude, small → GPT-4o" work
-   with zero service deploy. If they can't set this, req #4 changes shape.
-
-3. **Stable user IDs for BigCorp — do end-users have stable unique IDs in your
-   system, or only per-session IDs?**
-   *Why:* BigCorp's per-end-user "power user" report is only possible with a stable
-   `user_id`. Session-only IDs mean we can't attribute usage to a person.
-
-4. **Tenant → tier mapping — how many tiers are there, and which of the 22 tenants
-   is Enterprise / Growth / Starter?** *(added)*
-   *Why:* budgets are enforced by a `tier` metadata tag. We need the mapping to set
-   the right ceiling for each tenant.
+- **P0 — Foundational:** answers that determine the application-side asks and the
+  overall design. Unresolved, these block implementation.
+- **P1 — Behaviour and compliance:** decisions that change configuration and carry
+  renewal or audit risk.
+- **P2 — Configuration values:** parameters with safe defaults that can be
+  confirmed without blocking progress.
 
 ---
 
-## P1 — Behavior & compliance (design decisions, renewal/audit risk)
+## P0 — Foundational
 
-5. **Budget overflow — when a tenant hits its ceiling, do we hard-block requests,
-   or allow overage and just alert?**
-   *Why:* this is the `audit_mode` switch. The CTO asked for "hard ceilings," but
-   blocking a paying customer mid-contract is a business call — confirm explicitly.
+The Gateway routes, enforces budgets, and reports on the metadata it receives; it
+does not infer tenant, user, or token size on its own. These questions define what
+the application must send.
 
-6. **PHI redaction scope — does it apply to inputs (what the user sends), outputs
-   (model response), or both?**
-   *Why:* input-only is enough to keep PHI out of OpenAI's logs and is far faster
-   (directly addresses the "sluggish" sandbox complaint). Both = safer but slower.
-   This trade-off needs the customer's call.
+1. **Request identity.** Will each request carry `tenant_id` (and `user_id`) as
+   metadata, or should we provision a separate API key per tenant? Per-tenant
+   budgets, per-tenant log routing, and per-tenant and per-user reporting all
+   depend on this identity being present.
 
-7. **PHI on detection — block the request entirely, or redact and continue?**
-   *Why:* redact-and-continue keeps the assistant usable; block is stricter. Drives
-   the guardrail's enforcing strategy.
+2. **Token-size signal.** Can the application measure input size before the call
+   and pass a metadata flag (for example `x-tfy-metadata: {"size": "large"}`) when
+   it exceeds the threshold? The Gateway routes on this metadata rather than
+   counting tokens itself; this single change enables model routing with no service
+   deploy.
 
-8. **Healthcare logs — should ALL of their traces go to their S3, or only traces
-   where PHI was detected? What retention period do they require? And do they
-   already have the S3 bucket + cross-account IAM role ready?** *(readiness added)*
-   *Why:* the CISO said "zero tolerance for ANY prompt/response data on a vendor,"
-   which points to ALL traces → their S3. Confirm scope, retention, and that the
-   bucket/role exist so we can wire `storage_integration_fqn`.
+3. **End-user identifiers.** For BigCorp's per-user reporting, do end-users have
+   stable unique identifiers, or only per-session identifiers? Stable identifiers
+   are required to attribute usage to individuals.
 
----
-
-## P2 — Config values (sensible defaults exist; just confirm)
-
-9. **Exact dollar limits per tier — Enterprise, Growth, Starter?**
-   *(We can propose e.g. $500 / $100 / $20 per day and let them adjust.)*
-
-10. **Exact token threshold for Claude Opus — is it a flat ~8K, or does it vary by
-    tier?**
-
-11. **Which PHI/PII categories must be caught — names, SSNs, diagnosis codes,
-    policy numbers, DOB?** *(Default: catch all PII categories, then narrow.)*
-
-12. **Budget reset — calendar month, or each customer's contract start date?**
-
-13. **Alert routing — who gets the budget alert (your team, the customer, or both),
-    and via Slack, email, or Teams?**
+4. **Tenant-to-tier mapping.** How many tiers exist, and which of the 22 tenants
+   belongs to each? Budgets are enforced by a `tier` metadata tag, so this mapping
+   is needed to apply the correct ceiling per tenant.
 
 ---
 
-## Cross-cutting (don't forget)
+## P1 — Behaviour and compliance
 
-14. **Anthropic access — do you have a Claude/Anthropic provider account, or only
-    OpenAI today?** *(added)* Routing to Opus needs Anthropic credentials wired
-    into the gateway.
+5. **Budget enforcement.** When a tenant reaches its ceiling, should requests be
+   hard-blocked, or allowed to overage with an alert? This selects between enforced
+   and audit modes and is ultimately a commercial decision.
 
-15. **Routing fallback — if Claude Opus is unavailable, should large requests fall
-    back to GPT-4o, or fail?** *(added)* Defines routing resilience.
+6. **Redaction scope.** Should PHI redaction apply to inputs, outputs, or both?
+   Input-only redaction keeps PHI out of the provider's logs at the lowest latency;
+   covering both is stricter but slower.
+
+7. **Action on detection.** When PHI is detected, should the request be blocked, or
+   redacted and allowed to continue?
+
+8. **Healthcare log handling.** Should all of the healthcare tenant's traces route
+   to their S3 bucket, or only those where PHI is detected? What retention period
+   is required, and is the destination bucket and cross-account IAM role already
+   provisioned?
 
 ---
 
-## What to actually ask for in the 30-minute meeting
+## P2 — Configuration values
 
-Keep the scarce meeting tight. Only three app-side asks are required:
+9. **Tier limits.** What are the daily cost ceilings for Enterprise, Growth, and
+   Starter?
 
-- **Set the base URL** to the TrueFoundry gateway (`https://gateway.truefoundry.ai`).
-- **Send identity metadata** on every request: `tenant_id`, `user_id`, `tier`.
-- **Send the token-size flag** (`x-tfy-metadata: {"size": "large"|"small"}`) based
-  on the app's own token count.
+10. **Routing threshold.** What is the exact token threshold for routing to Claude
+    Opus, and does it vary by tier?
 
-Everything else — budgets, PHI redaction, customer-managed S3 logging, model
-routing, cost reports — we configure on the Gateway with **no further app work.**
+11. **PII categories.** Which categories must be detected (names, SSNs, diagnosis
+    codes, policy numbers, dates of birth)?
+
+12. **Budget reset cadence.** Do budgets reset on the calendar month or on each
+    tenant's contract start date?
+
+13. **Alert routing.** Who receives budget alerts (Atlas, the customer, or both),
+    and through which channel (Slack, email, or Teams)?
+
+---
+
+## Additional considerations
+
+14. **Provider availability.** Is an Anthropic (Claude) provider account available,
+    or is the current setup OpenAI-only? Routing to Opus requires Anthropic
+    credentials configured in the Gateway.
+
+15. **Routing fallback.** If Claude Opus is unavailable, should large requests fall
+    back to GPT-4o, or fail?
+
+---
+
+## Application-side requests for the 30-minute window
+
+The implementation requires only three application-side changes; everything else is
+Gateway configuration.
+
+1. Point the application's base URL at the TrueFoundry Gateway
+   (`https://gateway.truefoundry.ai`).
+2. Include identity metadata on every request: `tenant_id`, `user_id`, and `tier`.
+3. Include the token-size flag (`x-tfy-metadata: {"size": "large" | "small"}`)
+   based on the application's own input measurement.
