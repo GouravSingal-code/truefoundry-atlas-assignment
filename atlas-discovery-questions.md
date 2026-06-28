@@ -1,18 +1,6 @@
 # Atlas — Discovery Questions
 
-A prioritised set of questions to resolve with Atlas before implementation. The
-goal is to lock down the few decisions that determine the architecture, then
-confirm the remaining configuration values.
-
-## Guiding constraint
-
-Atlas's engineering team is fully booked. We have a single 30-minute window to
-request application-side changes (base URL, request headers, request metadata).
-Everything else is delivered through TrueFoundry Gateway configuration — no new
-services and no application refactors.
-
-Because the application-side window is the scarce resource, the questions are
-prioritised accordingly:
+Questions are grouped by priority:
 
 - **P0 — Foundational:** answers that determine the application-side asks and the
   overall design. Unresolved, these block implementation.
