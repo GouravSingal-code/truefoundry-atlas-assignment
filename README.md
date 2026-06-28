@@ -2,11 +2,58 @@
 
 Token-based LLM router proxy (FastAPI) with TrueFoundry/EKS deploy manifests
 
-Token proxy service: https://youtu.be/TpckrfeM_Ww?si=hwCdTnEq4QI7mfT3
-
 ## Architecture
 
 ![Architecture](architecture.png)
+
+---
+
+## Step 0 — Build the cluster ([`opentofu-aws/`](opentofu-aws/))
+
+**Is this needed? Yes.** Before anything else can run, we need a place to run it.
+The `opentofu-aws/` folder is the code that builds that place: an AWS Kubernetes
+cluster (EKS) with TrueFoundry installed on it. The proxy service and all the
+gateway config (budgets, guardrails, routing) live *on top of* this cluster.
+You run this once to set things up.
+
+It is written in **OpenTofu** (an open, free version of Terraform). You describe
+what you want in files, and OpenTofu creates it in AWS for you.
+
+**In simple words, here is what it does:**
+
+1. **Makes a private network in AWS** — a VPC with subnets, so the cluster has its
+   own isolated space to run in.
+2. **Creates the EKS cluster** — this is the actual Kubernetes cluster
+   (`atlas-cluster`) in the AWS region `ap-south-1`.
+3. **Adds the pieces a cluster needs** — disk storage (EBS/EFS), a load balancer to
+   send traffic to apps, and Karpenter to add or remove servers automatically when
+   load goes up or down.
+4. **Turns on TrueFoundry platform features** — blob storage, a container registry
+   (to hold app images), and parameter store.
+5. **Installs TrueFoundry onto the cluster** — connects it back to the TrueFoundry
+   control plane (`slayzsloth.truefoundry.cloud`) so you can deploy and manage apps
+   from the dashboard.
+
+It is also **safe to re-run.** When it runs, it first checks if the cluster already
+exists — if it does, it skips creating it again (see
+`truefoundry-cluster.stdout`: *"Cluster already exists and is provisioned.
+Skipping creation."*).
+
+> The cluster settings (region, network ranges, version) come from `config.json`
+> and `terraform.tfvars`. Both hold secrets, so they are gitignored and never
+> pushed.
+
+**How to run it (one time):**
+
+```bash
+cd opentofu-aws
+tofu init      # download the modules
+tofu plan      # preview what will be created
+tofu apply     # actually build the cluster
+```
+
+After this finishes, the cluster is ready and you can deploy the proxy
+([`token-proxy/`](token-proxy/)) and apply the gateway config below.
 
 ---
 
@@ -94,6 +141,8 @@ This gives the CISO exactly what he asked for without altering anyone else's set
 
 **Solved by:** [`atlas-virtual-model.yaml`](atlas-virtual-model.yaml) + the proxy
 ([`main.py`](token-proxy/main.py))
+
+▶️ **Demo video:** https://youtu.be/TpckrfeM_Ww?si=hwCdTnEq4QI7mfT3
 
 The proxy counts input tokens and tags each request with an `x-tfy-metadata`
 `token_bucket` of `small` or `large`. The **virtual model** then does
