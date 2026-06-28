@@ -9,7 +9,6 @@ type: cluster
 ingress_controller_config:
   ingress_class_name: istio
   tls_enabled: false
-  https_redirect: false
 base_domains:
   - 13.202.247.205.nip.io
 default_registry_fqn: slayzsloth:aws:atlas-cluster:docker-registry:registry
