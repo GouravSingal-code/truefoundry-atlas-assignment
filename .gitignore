@@ -1,0 +1,36 @@
+# --- Secrets / credentials (DO NOT COMMIT) ---
+config.json
+work.py
+*.tfvars
+*.tfvars.json
+
+# --- Terraform / OpenTofu state & local dirs ---
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+.terraformrc
+terraform.rc
+
+# --- Build artifacts ---
+*.zip
+*.stdout
+*.stderr
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- Editor / OS ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

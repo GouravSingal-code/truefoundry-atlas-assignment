@@ -1,0 +1,30 @@
+type: service
+name: token-router-proxy
+image:
+  type: build
+  build_source:
+    type: local
+    project_root_path: ./
+  build_spec:
+    type: tfy-python-buildpack
+    python_version: "3.11"
+    requirements_path: requirements.txt
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+ports:
+  - port: 8000
+    expose: true
+    app_protocol: http
+    host: token-router-proxy.13.202.247.205.nip.io
+resources:
+  cpu_request: 0.2
+  cpu_limit: 1.0
+  memory_request: 256
+  memory_limit: 512
+env:
+  GATEWAY_URL: "tfy-secret://slayzsloth:atlas-secret:GATEWAY_URL"
+  GATEWAY_API_KEY: "tfy-secret://slayzsloth:atlas-secret:GATEWAY_API_KEY"
+  SMALL_THRESHOLD: "4096"
+  SMALL_MODEL: "openai/gpt-4o"
+  LARGE_MODEL: "anthropic/claude-opus-4-5"
+replicas: 1
+workspace_fqn: "atlas-cluster:atlas"
