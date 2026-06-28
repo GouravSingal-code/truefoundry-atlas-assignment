@@ -15,6 +15,33 @@ sub-part of the larger setup, not the whole thing.
 
 ---
 
+## Secrets
+
+No secrets are kept in code or committed to this repo. They live in **TrueFoundry's
+built-in secret store** and are referenced by name, so the manifests stay safe to
+commit.
+
+In [`token-proxy/service.yaml`](token-proxy/service.yaml) the proxy reads its
+secrets through `tfy-secret://` references instead of hardcoded values:
+
+```yaml
+env:
+  GATEWAY_URL:     "tfy-secret://slayzsloth:atlas-secret:GATEWAY_URL"
+  GATEWAY_API_KEY: "tfy-secret://slayzsloth:atlas-secret:GATEWAY_API_KEY"
+```
+
+- The gateway base URL is **https://gateway.truefoundry.ai** — this is the value
+  stored behind `GATEWAY_URL`.
+- The actual values (gateway URL, API key) are stored once in the `atlas-secret`
+  secret group on TrueFoundry and injected into the container at runtime.
+- The repo only contains the *reference* (`tfy-secret://...`), never the value, so
+  rotating a secret is done in TrueFoundry — no code change or redeploy of the
+  manifest needed.
+- Local-only files that do hold real values (`config.json`, `*.tfvars`) are
+  gitignored and never pushed.
+
+---
+
 ## Atlas Requirements & How We Solve Them
 
 Every solution below is **config on the TrueFoundry AI Gateway**, not application
