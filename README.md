@@ -26,9 +26,9 @@ code. Requests flow through the gateway carrying metadata (`tenant_id`, `tier`,
 > *"One tenant's intern burned $4,200 of OpenAI credit in six hours. The CFO wants
 > hard ceilings per customer. We have 22 tenants with very different usage patterns."*
 
-**Solved by:** [`budget-rules.yaml`](budget-rules.yaml) (+ tier VAs
-[`va-enterprise.yaml`](va-enterprise.yaml), [`va-growth.yaml`](va-growth.yaml),
-[`va-starter.yaml`](va-starter.yaml))
+**Solved by:** [`budget-rules.yaml`](manifests/budget-rules.yaml) (+ tier VAs
+[`va-enterprise.yaml`](manifests/va-enterprise.yaml), [`va-growth.yaml`](manifests/va-growth.yaml),
+[`va-starter.yaml`](manifests/va-starter.yaml))
 
 A `gateway-budget-config` enforces **per-tenant daily cost limits**, keyed by
 `budget_applies_per: metadata.tenant_id`, so each of the 22 tenants gets its own
@@ -54,9 +54,9 @@ patterns:
 > OpenAI's logs. None of our other 21 customers care — and the ones who tested
 > redaction complained about latency."*
 
-**Solved by:** [`guardrails-policy.yaml`](guardrails-policy.yaml) +
-[`phi-guardrail-group.yaml`](phi-guardrail-group.yaml) +
-[`healthcare-insurer-va.yaml`](healthcare-insurer-va.yaml)
+**Solved by:** [`guardrails-policy.yaml`](manifests/guardrails-policy.yaml) +
+[`phi-guardrail-group.yaml`](manifests/phi-guardrail-group.yaml) +
+[`healthcare-insurer-va.yaml`](manifests/healthcare-insurer-va.yaml)
 
 A `gateway-guardrails-config` applies a PHI-redaction guardrail
 (`tfy-pii`, `operation: mutate`, `enforcing_strategy: enforce`, all PII
@@ -79,7 +79,7 @@ Two design choices map directly to the requirement:
 > infrastructure. Logs land in our S3 with our retention policy, or we don't renew.
 > The other 21 are fine with TrueFoundry storage."*
 
-**Solved by:** [`two-va-routing.yaml`](two-va-routing.yaml)
+**Solved by:** [`two-va-routing.yaml`](manifests/two-va-routing.yaml)
 
 A `gateway-data-routing-config` splits trace/log storage by tenant:
 
@@ -97,7 +97,7 @@ This gives the CISO exactly what he asked for without altering anyone else's set
 > *"Send any input over ~8K tokens to Claude Opus, keep GPT-4o for the rest. The
 > deploy queue is four weeks deep — I want this without a service deploy."*
 
-**Solved by:** [`atlas-virtual-model.yaml`](atlas-virtual-model.yaml) + the proxy
+**Solved by:** [`atlas-virtual-model.yaml`](manifests/atlas-virtual-model.yaml) + the proxy
 ([`main.py`](token-proxy/main.py))
 
 ▶️ **Demo video:** https://youtu.be/TpckrfeM_Ww?si=hwCdTnEq4QI7mfT3
@@ -121,7 +121,7 @@ weight-based routing on that metadata, entirely in gateway config:
 > *"CFO needs a per-tenant cost report for the last 90 days. BigCorp wants
 > per-end-user usage inside their org. Today we have zero visibility at either level."*
 
-**Solved by:** per-request metadata + [`bigcorp-va.yaml`](bigcorp-va.yaml)
+**Solved by:** per-request metadata + [`bigcorp-va.yaml`](manifests/bigcorp-va.yaml)
 
 Because every request carries `metadata.tenant_id` (the same key the budgets use)
 and a per-user identifier, the gateway's usage/cost metrics can be grouped at two
@@ -130,7 +130,7 @@ levels:
 - **Per-tenant cost (90 days):** aggregate gateway cost metrics by
   `metadata.tenant_id` — this directly produces the CFO's chargeback report and
   exposes the two outlier tenants billing flat per-seat.
-- **Per-end-user for BigCorp:** [`bigcorp-va.yaml`](bigcorp-va.yaml) is BigCorp's
+- **Per-end-user for BigCorp:** [`bigcorp-va.yaml`](manifests/bigcorp-va.yaml) is BigCorp's
   dedicated virtual account (tagged `tier: enterprise`); filtering its traffic by
   the `user` metadata dimension surfaces power users inside their org.
 
@@ -141,10 +141,10 @@ levels:
 | File | Purpose |
 | ---- | ------- |
 | [`service.yaml`](token-proxy/service.yaml) / [`deploy.py`](token-proxy/deploy.py) | Deploy the proxy service |
-| [`atlas-virtual-model.yaml`](atlas-virtual-model.yaml) | Token-based model routing (req #4) |
-| [`budget-rules.yaml`](budget-rules.yaml) | Per-tenant cost ceilings (req #1) |
-| [`guardrails-policy.yaml`](guardrails-policy.yaml) / [`phi-guardrail-group.yaml`](phi-guardrail-group.yaml) | PHI redaction for one tenant (req #2) |
-| [`two-va-routing.yaml`](two-va-routing.yaml) | Customer-managed log storage (req #3) |
-| [`va-enterprise.yaml`](va-enterprise.yaml) / [`va-growth.yaml`](va-growth.yaml) / [`va-starter.yaml`](va-starter.yaml) | Tiered virtual accounts |
-| [`healthcare-insurer-va.yaml`](healthcare-insurer-va.yaml) / [`bigcorp-va.yaml`](bigcorp-va.yaml) | Customer-specific virtual accounts |
-| [`atlas-cluster.yaml`](atlas-cluster.yaml) / [`cluster.yaml`](cluster.yaml) | EKS cluster config |
+| [`atlas-virtual-model.yaml`](manifests/atlas-virtual-model.yaml) | Token-based model routing (req #4) |
+| [`budget-rules.yaml`](manifests/budget-rules.yaml) | Per-tenant cost ceilings (req #1) |
+| [`guardrails-policy.yaml`](manifests/guardrails-policy.yaml) / [`phi-guardrail-group.yaml`](manifests/phi-guardrail-group.yaml) | PHI redaction for one tenant (req #2) |
+| [`two-va-routing.yaml`](manifests/two-va-routing.yaml) | Customer-managed log storage (req #3) |
+| [`va-enterprise.yaml`](manifests/va-enterprise.yaml) / [`va-growth.yaml`](manifests/va-growth.yaml) / [`va-starter.yaml`](manifests/va-starter.yaml) | Tiered virtual accounts |
+| [`healthcare-insurer-va.yaml`](manifests/healthcare-insurer-va.yaml) / [`bigcorp-va.yaml`](manifests/bigcorp-va.yaml) | Customer-specific virtual accounts |
+| [`atlas-cluster.yaml`](manifests/atlas-cluster.yaml) / [`cluster.yaml`](manifests/cluster.yaml) | EKS cluster config |
