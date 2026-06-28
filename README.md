@@ -147,4 +147,4 @@ levels:
 | [`two-va-routing.yaml`](manifests/routing/two-va-routing.yaml) | Customer-managed log storage (req #3) |
 | [`va-enterprise.yaml`](manifests/virtual-accounts/va-enterprise.yaml) / [`va-growth.yaml`](manifests/virtual-accounts/va-growth.yaml) / [`va-starter.yaml`](manifests/virtual-accounts/va-starter.yaml) | Tiered virtual accounts |
 | [`healthcare-insurer-va.yaml`](manifests/virtual-accounts/healthcare-insurer-va.yaml) / [`bigcorp-va.yaml`](manifests/virtual-accounts/bigcorp-va.yaml) | Customer-specific virtual accounts |
-| [`atlas-cluster.yaml`](manifests/cluster/atlas-cluster.yaml) / [`cluster.yaml`](manifests/cluster/cluster.yaml) | EKS cluster config |
+| [`atlas-cluster.yaml`](manifests/cluster/atlas-cluster.yaml) | EKS cluster config |
