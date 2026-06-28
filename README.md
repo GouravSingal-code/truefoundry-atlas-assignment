@@ -1,5 +1,8 @@
 # Atlas multi-tenant AI gateway
 
+The gateway base URL is **https://gateway.truefoundry.ai** — this is the value
+stored behind `GATEWAY_URL`.
+
 Atlas runs a multi-tenant AI assistant for 22 customers on TrueFoundry's AI
 Gateway. This repo is the gateway configuration (plus a small FastAPI proxy) that
 solves **five** real problems the Atlas team raised: cost runaway, PHI compliance,
