@@ -30,6 +30,8 @@ env:
   GATEWAY_API_KEY: "tfy-secret://slayzsloth:atlas-secret:GATEWAY_API_KEY"
 ```
 
+- The gateway base URL is **https://gateway.truefoundry.ai** — this is the value
+  stored behind `GATEWAY_URL`.
 - The actual values (gateway URL, API key) are stored once in the `atlas-secret`
   secret group on TrueFoundry and injected into the container at runtime.
 - The repo only contains the *reference* (`tfy-secret://...`), never the value, so
