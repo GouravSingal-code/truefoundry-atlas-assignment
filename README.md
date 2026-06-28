@@ -1,59 +1,17 @@
-# token-router-proxy
+# Atlas multi-tenant AI gateway
 
-Token-based LLM router proxy (FastAPI) with TrueFoundry/EKS deploy manifests
+Atlas runs a multi-tenant AI assistant for 22 customers on TrueFoundry's AI
+Gateway. This repo is the gateway configuration (plus a small FastAPI proxy) that
+solves **five** real problems the Atlas team raised: cost runaway, PHI compliance,
+data residency, smart model routing, and cost visibility.
+
+Token-based model routing — sending big prompts to Claude and small ones to
+GPT-4o — is just **one** of those five pieces (see requirement #4 below). It is a
+sub-part of the larger setup, not the whole thing.
 
 ## Architecture
 
 ![Architecture](architecture.png)
-
----
-
-## Step 0 — Build the cluster ([`opentofu-aws/`](opentofu-aws/))
-
-**Is this needed? Yes.** Before anything else can run, we need a place to run it.
-The `opentofu-aws/` folder is the code that builds that place: an AWS Kubernetes
-cluster (EKS) with TrueFoundry installed on it. The proxy service and all the
-gateway config (budgets, guardrails, routing) live *on top of* this cluster.
-You run this once to set things up.
-
-It is written in **OpenTofu** (an open, free version of Terraform). You describe
-what you want in files, and OpenTofu creates it in AWS for you.
-
-**In simple words, here is what it does:**
-
-1. **Makes a private network in AWS** — a VPC with subnets, so the cluster has its
-   own isolated space to run in.
-2. **Creates the EKS cluster** — this is the actual Kubernetes cluster
-   (`atlas-cluster`) in the AWS region `ap-south-1`.
-3. **Adds the pieces a cluster needs** — disk storage (EBS/EFS), a load balancer to
-   send traffic to apps, and Karpenter to add or remove servers automatically when
-   load goes up or down.
-4. **Turns on TrueFoundry platform features** — blob storage, a container registry
-   (to hold app images), and parameter store.
-5. **Installs TrueFoundry onto the cluster** — connects it back to the TrueFoundry
-   control plane (`slayzsloth.truefoundry.cloud`) so you can deploy and manage apps
-   from the dashboard.
-
-It is also **safe to re-run.** When it runs, it first checks if the cluster already
-exists — if it does, it skips creating it again (see
-`truefoundry-cluster.stdout`: *"Cluster already exists and is provisioned.
-Skipping creation."*).
-
-> The cluster settings (region, network ranges, version) come from `config.json`
-> and `terraform.tfvars`. Both hold secrets, so they are gitignored and never
-> pushed.
-
-**How to run it (one time):**
-
-```bash
-cd opentofu-aws
-tofu init      # download the modules
-tofu plan      # preview what will be created
-tofu apply     # actually build the cluster
-```
-
-After this finishes, the cluster is ready and you can deploy the proxy
-([`token-proxy/`](token-proxy/)) and apply the gateway config below.
 
 ---
 
